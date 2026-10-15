@@ -1,0 +1,44 @@
+name: Mimir poll
+
+on:
+  schedule:
+    - cron: "*/5 * * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: mimir-telegram-poll
+  cancel-in-progress: false
+
+jobs:
+  poll:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_SERVICE_ACCOUNT_JSON }}
+
+      - name: Install Mimir
+        run: python -m pip install .
+
+      - name: Poll and process Telegram updates
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_OWNER_USER_ID: ${{ secrets.TELEGRAM_OWNER_USER_ID }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          GOOGLE_CLOUD_PROJECT: ${{ secrets.GOOGLE_CLOUD_PROJECT }}
+          MIMIR_OWNER_PROFILE: ${{ secrets.MIMIR_OWNER_PROFILE }}
+          MIMIR_OWNER_PROFILE_VERSION: ${{ vars.MIMIR_OWNER_PROFILE_VERSION }}
+          FIRESTORE_DATABASE: ${{ vars.FIRESTORE_DATABASE }}
+          GEMINI_MODEL: ${{ vars.GEMINI_MODEL }}
+        run: python -m mimir.run
